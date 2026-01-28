@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List
+from src.reflex.yolo_detector import YoloDetector
 
 class VisionProcessor:
     def __init__(self):
@@ -15,6 +16,12 @@ class VisionProcessor:
         
         # Area threshold to trigger warning (percentage of ROI)
         self.danger_threshold = 0.05 
+
+        # YOLO Detector
+        self.yolo = YoloDetector() # Will load detection model
+        self.frame_count = 0
+        self.skip_frames = 5 # Run YOLO every 5 frames
+        self.last_detections = [] 
 
     def process_frame(self, frame: np.ndarray) -> Dict[str, Any]:
         """
@@ -45,10 +52,16 @@ class VisionProcessor:
         
         lava_detected = coverage > self.danger_threshold
         
+        # 2. Object Detection (YOLO)
+        self.frame_count += 1
+        if self.frame_count % self.skip_frames == 0:
+            self.last_detections = self.yolo.detect(frame)
+            
         return {
             "lava_detected": lava_detected,
             "danger_level": coverage,
-            "mask": mask # For debug visualization
+            "mask": mask, # For debug visualization
+            "detections": self.last_detections
         }
 
 if __name__ == "__main__":

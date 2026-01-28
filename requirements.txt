@@ -7,3 +7,4 @@ pytesseract==0.3.10
 colorama==0.4.6
 google-generativeai
 python-dotenv
+ultralytics
