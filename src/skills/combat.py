@@ -10,6 +10,11 @@ class CombatSkills:
         self.kp_x = 0.002 # Sensitivity X
         self.kp_y = 0.002 # Sensitivity Y
         self.attack_range_pixels = 50 # If within this center distance, attack
+        
+        # Allowed Targets (Whitelist)
+        # In a real scenario, use specific mob names.
+        # For testing with YOLOv8n (COCO), use "person", "bear", "bird", etc.
+        self.allowed_targets = ["person", "zombie", "skeleton", "creeper", "spider"]
 
     def update(self, detections: List[Dict[str, Any]], screen_size: Tuple[int, int]):
         """
@@ -48,9 +53,9 @@ class CombatSkills:
         min_dist = float('inf')
         
         for det in detections:
-            # Filter by label (Assuming 'person' is the enemy for test, normally 'zombie', 'skeleton' etc)
-            label = det.get("label", "")
-            if label != "person": 
+            # Filter by label
+            label = det.get("label", "").lower()
+            if label not in self.allowed_targets: 
                 continue
                 
             x1, y1, x2, y2 = det["box"]
