@@ -10,9 +10,10 @@ class VisionProcessor:
         # Note: OpenCV HSV ranges are H: 0-179, S: 0-255, V: 0-255
         
         # Lower bound for orange/red
-        self.lava_lower = np.array([0, 150, 150]) 
-        # Upper bound for orange/yellow
-        self.lava_upper = np.array([30, 255, 255])
+        # Lower bound (Tightened to exclude red blocks, focus on glowing orange)
+        self.lava_lower = np.array([5, 180, 180]) 
+        # Upper bound 
+        self.lava_upper = np.array([35, 255, 255])
         
         # Area threshold to trigger warning (percentage of ROI)
         self.danger_threshold = 0.05 
@@ -20,8 +21,14 @@ class VisionProcessor:
         # YOLO Detector
         self.yolo = YoloDetector() # Will load detection model
         self.frame_count = 0
-        self.skip_frames = 5 # Run YOLO every 5 frames
+        # RTX 5090 can handle every frame. No skipping needed for 60FPS.
+        self.skip_frames = 1 
         self.last_detections = [] 
+        
+        # Filter for Minecraft relevance (COCO classes)
+        # 0: person (Player/Villager)
+        # 15: cat, 16: dog, 17: horse, 18: sheep, 19: cow, 20: elephant, 21: bear, 22: zebra, 23: giraffe
+        self.allowed_classes = {0, 15, 16, 17, 18, 19, 20, 21, 22, 23} 
 
     def process_frame(self, frame: np.ndarray) -> Dict[str, Any]:
         """
@@ -55,13 +62,20 @@ class VisionProcessor:
         # 2. Object Detection (YOLO)
         self.frame_count += 1
         if self.frame_count % self.skip_frames == 0:
-            self.last_detections = self.yolo.detect(frame)
+            # Lower confidence to catch stationary/partial objects
+            raw_detections = self.yolo.detect(frame, conf_threshold=0.15)
+            # Filter garbage (chairs, dining tables, etc.)
+            self.last_detections = [
+                d for d in raw_detections 
+                if d['cls_id'] in self.allowed_classes
+            ]
             
         return {
             "lava_detected": lava_detected,
             "danger_level": coverage,
             "mask": mask, # For debug visualization
-            "detections": self.last_detections
+            "detections": self.last_detections,
+            "device": str(self.yolo.model.device) if (self.yolo and self.yolo.model) else "N/A"
         }
 
 if __name__ == "__main__":

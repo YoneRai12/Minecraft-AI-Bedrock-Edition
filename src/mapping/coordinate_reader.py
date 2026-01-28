@@ -14,7 +14,12 @@ class CoordinateReader:
         self.last_position = (0, 0, 0)
         # Default region for Bedrock: Top left, but user might need to adjust
         # Approximate values for 1920x1080
-        self.region = {"top": 0, "left": 0, "width": 400, "height": 100} 
+        self.region = {"top": 0, "left": 0, "width": 400, "height": 100}
+        
+        # Optimization: OCR is slow (Tesseract takes ~100-200ms)
+        # Only run it every N frames
+        self.frame_count = 0
+        self.ocr_interval = 30   
         
     def set_region(self, top: int, left: int, width: int, height: int):
         self.region = {"top": top, "left": left, "width": width, "height": height}
@@ -24,8 +29,8 @@ class CoordinateReader:
         Extract coordinates from the frame.
         Expects format similar to "Position: 123, 64, 456"
         """
-        if frame is None:
-            return None
+        # User requested to disable OCR for performance
+        return self.last_position
 
         # Crop to roi
         x, y, w, h = self.region["left"], self.region["top"], self.region["width"], self.region["height"]
@@ -42,7 +47,14 @@ class CoordinateReader:
         try:
             # psm 7 = Treat the image as a single text line.
             text = pytesseract.image_to_string(thresh, config='--psm 7')
-            return self._parse_coordinates(text)
+            
+            # Update last position if valid
+            res = self._parse_coordinates(text)
+            if res:
+                self.last_position = res
+            return self.last_position
+        except Exception as e:
+            return self.last_position
         except Exception as e:
             # Tesseract might not be found
             return None

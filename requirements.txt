@@ -5,6 +5,7 @@ vgamepad==0.1.0
 keyboard==0.13.5
 pytesseract==0.3.10
 colorama==0.4.6
-google-generativeai
 python-dotenv
 ultralytics
+openai
+pygetwindow

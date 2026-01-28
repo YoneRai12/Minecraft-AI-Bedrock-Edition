@@ -1,16 +1,21 @@
+import os
+from dotenv import load_dotenv
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from typing import List, Dict, Any
 
+load_dotenv()
+
 class YoloDetector:
-    def __init__(self, model_path: str = "yolov8n.pt"):
-        print(f"[YOLO] Loading model: {model_path}...")
+    def __init__(self, model_path: str = "yolo11x.pt"):
+        self.device = os.getenv("YOLO_DEVICE", None) # None = Auto (GPU if avail)
+        print(f"[YOLO] Loading model: {model_path} (Device: {self.device if self.device else 'Auto'})...")
         try:
             self.model = YOLO(model_path)
             # Warmup
             print("[YOLO] Model loaded. Warming up...")
-            # self.model.predict(np.zeros((640, 640, 3), dtype=np.uint8), verbose=False) # Optional warmup
+            # self.model.predict(np.zeros((640, 640, 3), dtype=np.uint8), verbose=False, device=self.device) 
         except Exception as e:
             print(f"[YOLO] Error loading model: {e}")
             self.model = None
@@ -23,7 +28,20 @@ class YoloDetector:
         if self.model is None:
             return []
 
-        results = self.model.predict(frame, conf=conf_threshold, verbose=False, device='cpu')
+        try:
+            results = self.model.predict(frame, conf=conf_threshold, verbose=False, device=self.device)
+        except RuntimeError as e:
+            if "CUDA" in str(e) and self.device != 'cpu':
+                print(f"[YOLO] CUDA Error detected ({e}). Falling back to CPU for stability.")
+                self.device = 'cpu'
+                results = self.model.predict(frame, conf=conf_threshold, verbose=False, device='cpu')
+            else:
+                print(f"[YOLO] Critical Inference Error: {e}")
+                return []
+        except Exception as e:
+            print(f"[YOLO] Unexpected Error: {e}")
+            return []
+
         detections = []
         
         for r in results:
