@@ -7,29 +7,38 @@ class PrimitiveSkills:
 
     def move_forward(self, duration: float = 1.0):
         print(f"[Skill] Moving Forward for {duration}s")
-        self.controller.move_forward(duration)
+        self.controller.set_move(0.0, 1.0)
+        time.sleep(duration)
+        self.controller.set_move(0.0, 0.0)
 
     def move_backward(self, duration: float = 1.0):
         print(f"[Skill] Moving Backward for {duration}s")
-        self.controller.move_backward(duration)
+        self.controller.set_move(0.0, -1.0)
+        time.sleep(duration)
+        self.controller.set_move(0.0, 0.0)
         
     def jump(self):
         print("[Skill] Jumping")
-        self.controller.jump()
+        self.controller.set_jump(True)
+        time.sleep(0.1)
+        self.controller.set_jump(False)
 
     def attack(self, duration: float = 1.0):
         print(f"[Skill] Attacking for {duration}s")
-        start = time.time()
-        while time.time() - start < duration:
-            self.controller.attack()
-            time.sleep(0.1)
+        self.controller.set_attack(True)
+        time.sleep(duration)
+        self.controller.set_attack(False)
 
     def look_around(self):
         print("[Skill] Looking Around")
-        # Simple scan
-        self.controller.look_rotation(0.5, 0.0, 0.5)
-        self.controller.look_rotation(-1.0, 0.0, 0.5)
-        self.controller.look_rotation(0.5, 0.0, 0.5)
+        # Scan: Right -> Left -> Center
+        self.controller.set_look(0.5, 0.0)
+        time.sleep(0.5)
+        self.controller.set_look(-1.0, 0.0)
+        time.sleep(0.5)
+        self.controller.set_look(0.5, 0.0)
+        time.sleep(0.5)
+        self.controller.set_look(0.0, 0.0)
 
     def wait(self, duration: float = 1.0):
         print(f"[Skill] Waiting for {duration}s")
