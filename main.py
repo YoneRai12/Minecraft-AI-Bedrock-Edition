@@ -13,6 +13,9 @@ from src.reflex.safety_monitor import SafetyMonitor
 from src.mapping.coordinate_reader import CoordinateReader
 from src.core.state_manager import StateManager
 from src.interface.command_center import CommandCenter
+from src.reflex.vision_processor import VisionProcessor
+from src.reflex.behaviors import ReflexBehaviors
+from src.core.arbitrator import ActionArbitrator
 
 def main():
     print("Initializing MainkurafutoAI...")
@@ -25,6 +28,9 @@ def main():
         coord_reader = CoordinateReader()
         state_mgr = StateManager()
         cmd_center = CommandCenter(state_mgr)
+        vision_proc = VisionProcessor()
+        reflex_action = ReflexBehaviors(controller)
+        arbitrator = ActionArbitrator()
     except Exception as e:
         print(f"Initialization Failed: {e}")
         return
@@ -73,12 +79,39 @@ def main():
             coords = coord_reader.process_frame(frame)
             if coords:
                 state_mgr.update_position(coords)
-                # print(f"Position: {coords}")
+
+            # --- REFLEX LAYER ---
+            vision_result = vision_proc.process_frame(frame)
+            lava_danger = vision_result.get("lava_detected", False)
+            danger_level = vision_result.get("danger_level", 0.0)
+
+            # Determine Reflex Proposal
+            reflex_proposal = "RETREAT" if lava_danger else None
+            
+            # Arbitrate (Planning is None for now)
+            action = arbitrator.determine_action(reflex_proposal, None, None)
+
+            if action == "RETREAT":
+                reflex_action.retreat_from_danger()
+                status_color = (0, 0, 255) # Red
+                status_text = f"DANGER: LAVA ({danger_level:.1%})"
+            else:
+                reflex_action.stop_retreat() # Ensure we stop backtracking if safe
+                status_color = (0, 255, 0) # Green
+                status_text = "ACTIVE - SAFE"
 
             # 4. Debug Display
             current_state = state_mgr.get_state()
             cv2.putText(frame, f"Pos: {current_state.position}", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-            cv2.putText(frame, "ACTIVE - AI Watchdog", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, status_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
+            
+            # Show small mask for debug
+            if "mask" in vision_result:
+                mask_display = cv2.resize(vision_result["mask"], (320, 180))
+                # Overlay mask on bottom right
+                h, w, _ = frame.shape
+                frame[h-180:h, w-320:w] = cv2.cvtColor(mask_display, cv2.COLOR_GRAY2BGR)
+
             cv2.imshow("Bot View", cv2.resize(frame, (960, 540)))
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
