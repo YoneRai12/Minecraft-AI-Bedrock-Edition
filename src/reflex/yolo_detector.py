@@ -23,7 +23,7 @@ class YoloDetector:
         if self.model is None:
             return []
 
-        results = self.model.predict(frame, conf=conf_threshold, verbose=False)
+        results = self.model.predict(frame, conf=conf_threshold, verbose=False, device='cpu')
         detections = []
         
         for r in results:
