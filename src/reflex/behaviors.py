@@ -18,7 +18,7 @@ class ReflexBehaviors:
         # We can't block the main thread for too long, but reflex needs to be immediate.
         # Since this is called every frame while danger exists, we just execute a short burst of input.
         
-        self.controller.press_button(self.controller.gamepad.XUSB_GAMEPAD_S if self.controller.gamepad else 0, duration=0.0) 
+        # self.controller.press_button(...) # Removed incorrect button call 
         # Note: input_controller.move_backward sleeps. We might need a non-blocking version for real-time loops.
         # But efficiently, we can just trigger "hold back" state.
         

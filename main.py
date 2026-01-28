@@ -27,7 +27,7 @@ def main():
         safety = SafetyMonitor(controller)
         coord_reader = CoordinateReader()
         state_mgr = StateManager()
-        cmd_center = CommandCenter(state_mgr)
+        cmd_center = CommandCenter(state_mgr, controller)
         vision_proc = VisionProcessor()
         reflex_action = ReflexBehaviors(controller)
         arbitrator = ActionArbitrator()
