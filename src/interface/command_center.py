@@ -3,11 +3,16 @@ import queue
 import time
 from src.planning.llm_interface import LLMInterface
 from src.core.state_manager import StateManager
+from src.skills.registry import SkillRegistry
+from src.skills.primitives import PrimitiveSkills
+from src.utils.input_controller import InputController
 
 class CommandCenter:
-    def __init__(self, state_manager: StateManager):
+    def __init__(self, state_manager: StateManager, controller: InputController):
         self.state_manager = state_manager
         self.llm = LLMInterface()
+        self.primitives = PrimitiveSkills(controller)
+        self.registry = SkillRegistry(self.primitives)
         self.command_queue = queue.Queue()
         self.active = True
         
@@ -46,16 +51,16 @@ class CommandCenter:
             print("Unknown command. Try 'goal: <text>' or 'stop'.")
 
     def _handle_goal(self, goal: str):
+        print(f"[Planning] Goal: {goal}")
         state = self.state_manager.get_state().__dict__
         plan = self.llm.plan_task(goal, state)
-        print(f"Generated Plan: {plan}")
-        # Here we would dispatch plan to a Skill Manager
+        
+        if plan:
+            print(f"Executing Plan: {plan}")
+            self.registry.execute_plan(plan)
+        else:
+            print("Plan generation failed or empty.")
 
 if __name__ == "__main__":
-    from src.core.state_manager import StateManager
-    mgr = StateManager()
-    cc = CommandCenter(mgr)
-    cc.start_input_thread()
-    
-    while cc.active:
-        time.sleep(1)
+    # Test stub requires a controller mock
+    pass
