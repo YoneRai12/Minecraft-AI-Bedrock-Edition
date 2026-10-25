@@ -1,4 +1,5 @@
 import os
+import hashlib
 from dotenv import load_dotenv
 import cv2
 import numpy as np
@@ -11,6 +12,11 @@ class YoloDetector:
     def __init__(self, model_path: str = "yolo11x.pt"):
         self.device = os.getenv("YOLO_DEVICE", None) # None = Auto (GPU if avail)
         print(f"[YOLO] Loading model: {model_path} (Device: {self.device if self.device else 'Auto'})...")
+
+        if not self._is_model_trusted(model_path):
+            self.model = None
+            return
+
         try:
             self.model = YOLO(model_path)
             # Warmup
@@ -19,6 +25,34 @@ class YoloDetector:
         except Exception as e:
             print(f"[YOLO] Error loading model: {e}")
             self.model = None
+
+    def _is_model_trusted(self, model_path: str) -> bool:
+        if not model_path.lower().endswith('.pt'):
+            return True
+
+        expected_sha256 = os.getenv("YOLO_MODEL_SHA256", "").strip().lower()
+        if expected_sha256:
+            try:
+                with open(model_path, "rb") as f:
+                    actual_sha256 = hashlib.sha256(f.read()).hexdigest()
+            except OSError as e:
+                print(f"[YOLO] Could not read model for hash validation: {e}")
+                return False
+
+            if actual_sha256 != expected_sha256:
+                print("[YOLO] Refusing to load .pt model: SHA256 hash mismatch.")
+                return False
+            return True
+
+        if os.getenv("ALLOW_UNSAFE_YOLO_PT", "").strip() == "1":
+            print("[YOLO] Warning: loading .pt model without hash validation.")
+            return True
+
+        print(
+            "[YOLO] Refusing to load .pt model without trust settings. "
+            "Set YOLO_MODEL_SHA256 to the expected hash or ALLOW_UNSAFE_YOLO_PT=1."
+        )
+        return False
 
     def detect(self, frame: np.ndarray, conf_threshold: float = 0.5) -> List[Dict[str, Any]]:
         """
