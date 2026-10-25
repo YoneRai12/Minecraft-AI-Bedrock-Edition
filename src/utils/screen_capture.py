@@ -83,9 +83,12 @@ class ScreenCapture:
     def start(self):
         """Start the DXCam background capture."""
         if self.running: return
+        if not self.camera:
+            print("[Screen] Capture not started: camera initialization failed.")
+            return
+
         self.running = True
-        if self.camera:
-            self.camera.start(target_fps=120, video_mode=True)
+        self.camera.start(target_fps=120, video_mode=True)
         print("[Screen] Capture started.")
 
     def stop(self):
@@ -159,6 +162,9 @@ class ScreenCapture:
         Returns the latest captured frame from DXCam.
         """
         if not self.running:
+            return None
+
+        if self.camera is None:
             return None
             
         # Get frame (Non-blocking usually in video_mode)
